@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   cross_file: ^0.3.3+5
+  freezed_annotation: ^2.4.1
   http: ^1.1.0
   speed_test_dart: ^1.0.5+0
   universal_io: ^2.2.2
@@ -16,3 +17,4 @@ dev_dependencies:
   mockito: ^5.4.2
   build_runner: ^2.4.6
   test: ^1.24.7
+  freezed: ^2.4.7
