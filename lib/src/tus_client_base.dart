@@ -1,8 +1,20 @@
 import 'dart:convert';
 
 import 'package:cross_file/cross_file.dart';
+import 'package:http/http.dart' as http;
 import 'package:speed_test_dart/classes/server.dart';
 import 'package:tus_client_dart/tus_client_dart.dart';
+
+typedef PerformUpload = Future<void> Function({
+  void Function(double, Duration)? onProgress,
+  void Function()? onComplete,
+  required Map<String, String> uploadHeaders,
+  required http.Client client,
+  required Stopwatch uploadStopwatch,
+  required int totalBytes,
+});
+
+typedef RetryUpload = void Function(Duration retryAfter, PerformUpload retry);
 
 abstract class TusClientBase {
   /// Version of the tus protocol used by the client. The remote server needs to
@@ -26,7 +38,7 @@ abstract class TusClientBase {
   TusClientBase(
     this.file, {
     this.store,
-    this.maxChunkSize = 512 * 1024,
+    this.maxChunkSize = 6 * 1024 * 1024,
     this.retries = 0,
     this.retryScale = RetryScale.constant,
     this.retryInterval = 0,
@@ -40,10 +52,11 @@ abstract class TusClientBase {
 
   /// Starts an upload
   Future<void> upload({
-    Function(double, Duration)? onProgress,
-    Function(TusClient, Duration?)? onStart,
-    Function()? onComplete,
+    void Function(double, Duration)? onProgress,
+    void Function(TusClient, Duration?)? onStart,
+    void Function()? onComplete,
     required Uri uri,
+    RetryUpload? retryUpload,
     Map<String, String>? metadata = const {},
     Map<String, String>? headers = const {},
   });
@@ -53,9 +66,6 @@ abstract class TusClientBase {
 
   /// Cancels the upload
   Future<bool> cancelUpload();
-
-  /// Function to be called after completing upload
-  Future<void> onCompleteUpload();
 
   /// Override this method to customize creating file fingerprint
   String? generateFingerprint() {

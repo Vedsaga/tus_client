@@ -126,10 +126,11 @@ class TusClient extends TusClientBase {
   /// Start or resume an upload in chunks of [maxChunkSize] throwing
   /// [ProtocolException] on server error
   Future<void> upload({
-    Function(double, Duration)? onProgress,
-    Function(TusClient, Duration?)? onStart,
-    Function()? onComplete,
     required Uri uri,
+    void Function(double, Duration)? onProgress,
+    void Function(TusClient, Duration?)? onStart,
+    void Function()? onComplete,
+    RetryUpload? retryUpload,
     Map<String, String>? metadata = const {},
     Map<String, String>? headers = const {},
     bool measureUploadSpeed = false,
@@ -192,15 +193,22 @@ class TusClient extends TusClientBase {
   }
 
   Future<void> _performUpload({
-    Function(double, Duration)? onProgress,
-    Function()? onComplete,
+    void Function(double, Duration)? onProgress,
+    void Function()? onComplete,
+    RetryUpload? retryUpload,
     required Map<String, String> uploadHeaders,
     required http.Client client,
     required Stopwatch uploadStopwatch,
     required int totalBytes,
   }) async {
     try {
-      final request = http.Request("PATCH", _uploadUrl as Uri)
+      final uri = _uploadUrl;
+      if (uri == null) {
+        throw ProtocolException(
+          "Missing upload Uri in response for creating upload",
+        );
+      }
+      final request = http.Request("PATCH", uri)
         ..headers.addAll(uploadHeaders)
         ..bodyBytes = await _getData();
       _response = await client.send(request);
@@ -275,15 +283,7 @@ class TusClient extends TusClientBase {
       );
       _actualRetry += 1;
       log('Failed to upload,try: $_actualRetry, interval: $waitInterval');
-      await Future.delayed(waitInterval);
-      return await _performUpload(
-        onComplete: onComplete,
-        onProgress: onProgress,
-        uploadHeaders: uploadHeaders,
-        client: client,
-        uploadStopwatch: uploadStopwatch,
-        totalBytes: totalBytes,
-      );
+      retryUpload?.call(waitInterval, _performUpload);
     }
   }
 
