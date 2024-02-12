@@ -8,31 +8,31 @@ void main() {
   group('url_store:TusMemoryStore', () {
     test('set', () async {
       final store = TusMemoryStore();
-      await store.set(fingerprint, uri);
-      final foundUrl = await store.get(fingerprint);
+      await store.storeUploadInfo(fingerprint, uri);
+      final foundUrl = await store.fetchUploadUri(fingerprint);
       expect(foundUrl, uri);
     });
 
     test('get.empty', () async {
       final store = TusMemoryStore();
-      final foundUrl = await store.get(fingerprint);
+      final foundUrl = await store.fetchUploadUri(fingerprint);
       expect(foundUrl, isNull);
     });
 
     test('remove', () async {
       final store = TusMemoryStore();
-      await store.set(fingerprint, uri);
-      await store.remove(fingerprint);
-      final foundUrl = await store.get(fingerprint);
+      await store.storeUploadInfo(fingerprint, uri);
+      await store.deleteUploadEntry(fingerprint);
+      final foundUrl = await store.fetchUploadUri(fingerprint);
       expect(foundUrl, isNull);
     });
 
     test('remove.empty', () async {
       final store = TusMemoryStore();
-      var foundUrl = await store.get(fingerprint);
+      var foundUrl = await store.fetchUploadUri(fingerprint);
       expect(foundUrl, isNull);
-      await store.remove(fingerprint);
-      foundUrl = await store.get(fingerprint);
+      await store.deleteUploadEntry(fingerprint);
+      foundUrl = await store.fetchUploadUri(fingerprint);
       expect(foundUrl, isNull);
     });
   });

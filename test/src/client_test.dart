@@ -216,7 +216,7 @@ void main() {
   test('client_test.TusClient.resume()', () async {
     final store = TusMemoryStore();
     final client = MockTusClient(file, store: store);
-    await store.set(client.fingerprint, Uri.parse(uploadLocation));
+    await store.storeUploadInfo(client.fingerprint, Uri.parse(uploadLocation));
 
     await client.isResumable();
 
