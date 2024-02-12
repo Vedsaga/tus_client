@@ -8,7 +8,7 @@ import 'package:universal_io/io.dart';
 /// This functionality is used to allow resuming uploads.
 ///
 /// See [TusMemoryStore] or [TusFileStore]
-abstract class TusStore {
+mixin TusStore {
   /// Store a new upload entry by associating a [fingerprint] with its upload
   ///  [url].
   FutureOr<void> storeUploadInfo(String fingerprint, Uri url);
@@ -29,7 +29,7 @@ abstract class TusStore {
 ///
 /// This store **will not** keep the values after your application crashes or
 /// restarts.
-class TusMemoryStore implements TusStore {
+class TusMemoryStore with TusStore {
   Map<String, Uri> store = {};
 
   @override
@@ -50,7 +50,7 @@ class TusMemoryStore implements TusStore {
 
 /// [TusFileStore] is used for storing upload progress locally on the device.
 /// It is used by [TusClient] to resume uploads at correct %.
-class TusFileStore implements TusStore {
+class TusFileStore with TusStore {
   /// It must receive the directory to store the upload.
   TusFileStore(this.directory);
 
