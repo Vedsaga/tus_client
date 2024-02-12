@@ -16,9 +16,9 @@ class TusClient extends TusClientBase {
     super.file, {
     super.store,
     super.maxChunkSize = 512 * 1024,
-    super.retries = 0,
+    super.maxRetries = 0,
     super.retryScale = RetryScale.constant,
-    super.retryInterval = 0,
+    super.firstRetryCooldownTimeSecond = 0,
   }) {
     _fingerprint = generateFingerprint() ?? '';
   }
@@ -285,10 +285,10 @@ class TusClient extends TusClientBase {
         throw ProtocolException('Error getting Response from server');
       }
     } catch (e) {
-      if (_actualRetry >= retries) rethrow;
+      if (_actualRetry >= maxRetries) rethrow;
       final waitInterval = retryScale.getInterval(
         _actualRetry,
-        retryInterval,
+        firstRetryCooldownTimeSecond,
       );
       _actualRetry += 1;
       log('Failed to upload,try: $_actualRetry, interval: $waitInterval');

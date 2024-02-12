@@ -25,9 +25,9 @@ abstract class TusClientBase {
     this.file, {
     this.store,
     this.maxChunkSize = 6 * 1024 * 1024,
-    this.retries = 0,
-    this.retryScale = RetryScale.constant,
-    this.retryInterval = 0,
+    this.maxRetries = 0,
+    this.retryScale = RetryScale.exponential,
+    this.firstRetryCooldownTimeSecond = 0,
   });
 
   /// Version of the tus protocol used by the client. The remote server needs to
@@ -105,14 +105,16 @@ abstract class TusClientBase {
   /// File to upload, must be in[XFile] type
   final XFile file;
 
-  /// The maximum payload size in bytes when uploading the file in chunks (512KB)
+  /// The maximum payload size in bytes when uploading
+  /// the file in chunks (512KB)
   final int maxChunkSize;
 
-  /// The number of times that should retry to resume the upload if a failure occurs after rethrow the error.
-  final int retries;
+  /// The number of times that should retry to resume the upload if a failure
+  /// occurs after rethrow the error.
+  final int maxRetries;
 
   /// The interval between the first error and the first retry in [seconds].
-  final int retryInterval;
+  final int firstRetryCooldownTimeSecond;
 
   /// The scale type used to increase the interval of time between every retry.
   final RetryScale retryScale;
