@@ -23,8 +23,8 @@ typedef RetryUpload = FutureOr<void> Function(
 abstract class TusClientBase {
   TusClientBase(
     this.file, {
+    required this.maxChunkSize,
     this.store,
-    this.maxChunkSize = 6 * 1024 * 1024,
     this.maxRetries = 0,
     this.retryScale = RetryScale.exponential,
     this.firstRetryCooldownTimeSecond = 0,

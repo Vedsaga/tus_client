@@ -5,9 +5,7 @@ import 'dart:typed_data' show BytesBuilder, Uint8List;
 
 import 'package:http/http.dart' as http;
 import 'package:speed_test_dart/speed_test_dart.dart';
-import 'package:tus_client_dart/src/exceptions.dart';
-import 'package:tus_client_dart/src/retry_scale.dart';
-import 'package:tus_client_dart/src/tus_client_base.dart';
+import 'package:tus_client_dart/tus_client_dart.dart';
 import 'package:universal_io/io.dart';
 
 /// This class is used for creating or resuming uploads.
@@ -15,7 +13,7 @@ class TusClient extends TusClientBase {
   TusClient(
     super.file, {
     super.store,
-    super.maxChunkSize = 512 * 1024,
+    super.maxChunkSize = 6* 1024 * 1024,
     super.maxRetries = 0,
     super.retryScale = RetryScale.constant,
     super.firstRetryCooldownTimeSecond = 0,
