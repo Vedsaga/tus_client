@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cross_file/cross_file.dart';
@@ -14,7 +15,10 @@ typedef PerformUpload = Future<void> Function({
   void Function()? onComplete,
 });
 
-typedef RetryUpload = void Function(Duration retryAfter, PerformUpload retry);
+typedef RetryUpload = FutureOr<void> Function(
+  Duration retryAfter,
+  PerformUpload retry,
+);
 
 abstract class TusClientBase {
   TusClientBase(

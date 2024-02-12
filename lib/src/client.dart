@@ -66,7 +66,7 @@ class TusClient extends TusClientBase {
       }
 
       _uploadUrl = _parseUrl(urlStr);
-      await store?.set(_fingerprint, _uploadUrl!);
+      await store?.storeUploadInfo(_fingerprint, _uploadUrl!);
     } on FileSystemException {
       throw Exception('Cannot find file to upload');
     }
@@ -82,7 +82,7 @@ class TusClient extends TusClientBase {
         return false;
       }
 
-      _uploadUrl = await store?.get(_fingerprint);
+      _uploadUrl = await store?.fetchUploadUri(_fingerprint);
 
       if (_uploadUrl == null) {
         return false;
@@ -204,8 +204,8 @@ class TusClient extends TusClientBase {
     required http.Client client,
     required Stopwatch uploadStopwatch,
     required int totalBytes,
-    void Function(double, Duration)? onProgress,
-    void Function()? onComplete,
+    FutureOr<void> Function(double, Duration)? onProgress,
+    FutureOr<void> Function()? onComplete,
     RetryUpload? retryUpload,
   }) async {
     try {
@@ -266,17 +266,17 @@ class TusClient extends TusClientBase {
         final serverOffset = _parseOffset(_response!.headers['upload-offset']);
         if (serverOffset == null) {
           throw ProtocolException(
-            'Response to PATCH request contains no or invalid Upload-Offset header',
+            '''Response to PATCH request contains no or invalid Upload-Offset header''',
           );
         }
         if (_offset != serverOffset) {
           throw ProtocolException(
-            'Response contains different Upload-Offset value ($serverOffset) than expected ($_offset)',
+            '''Response contains different Upload-Offset value ($serverOffset) than expected ($_offset)''',
           );
         }
 
         if (_offset == totalBytes && !_pauseUpload) {
-          await onCompleteUpload();
+         await onComplete?.call();
           if (onComplete != null) {
             onComplete();
           }
@@ -292,7 +292,7 @@ class TusClient extends TusClientBase {
       );
       _actualRetry += 1;
       log('Failed to upload,try: $_actualRetry, interval: $waitInterval');
-      retryUpload?.call(waitInterval, _performUpload);
+     await retryUpload?.call(waitInterval, _performUpload);
     }
   }
 
@@ -312,16 +312,11 @@ class TusClient extends TusClientBase {
   Future<bool> cancelUpload() async {
     try {
       await pauseUpload();
-      await store?.remove(_fingerprint);
+      await store?.deleteUploadEntry(_fingerprint);
       return true;
     } catch (_) {
       throw Exception('Error cancelling upload');
     }
-  }
-
-  /// Actions to be performed after a successful upload
-  Future<void> onCompleteUpload() async {
-    await store?.remove(_fingerprint);
   }
 
   void setUploadData(
