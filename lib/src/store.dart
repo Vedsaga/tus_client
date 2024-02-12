@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:universal_io/io.dart';
 
 /// Implementations of this interface are used to lookup a
@@ -9,14 +11,14 @@ import 'package:universal_io/io.dart';
 abstract class TusStore {
   /// Store a new upload entry by associating a [fingerprint] with its upload
   ///  [url].
-  Future<void> storeUploadInfo(String fingerprint, Uri url);
+  FutureOr<void> storeUploadInfo(String fingerprint, Uri url);
 
   /// Retrieve an upload's Uri for a given [fingerprint].
   /// If no matching entry is found, this method will return `null`.
-  Future<Uri?> fetchUploadUri(String fingerprint);
+  FutureOr<Uri?> fetchUploadUri(String fingerprint);
 
   /// Remove an upload entry from the store using the upload's [fingerprint].
-  Future<void> deleteUploadEntry(String fingerprint);
+  FutureOr<void> deleteUploadEntry(String fingerprint);
 }
 
 
