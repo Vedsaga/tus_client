@@ -6,20 +6,29 @@ import 'package:speed_test_dart/classes/server.dart';
 import 'package:tus_client_dart/tus_client_dart.dart';
 
 typedef PerformUpload = Future<void> Function({
-  void Function(double, Duration)? onProgress,
-  void Function()? onComplete,
   required Map<String, String> uploadHeaders,
   required http.Client client,
   required Stopwatch uploadStopwatch,
   required int totalBytes,
+  void Function(double, Duration)? onProgress,
+  void Function()? onComplete,
 });
 
 typedef RetryUpload = void Function(Duration retryAfter, PerformUpload retry);
 
 abstract class TusClientBase {
+  TusClientBase(
+    this.file, {
+    this.store,
+    this.maxChunkSize = 6 * 1024 * 1024,
+    this.retries = 0,
+    this.retryScale = RetryScale.constant,
+    this.retryInterval = 0,
+  });
+
   /// Version of the tus protocol used by the client. The remote server needs to
   /// support this version, too.
-  final tusVersion = "1.0.0";
+  final tusVersion = '1.0.0';
 
   /// The tus server Uri
   Uri? url;
@@ -35,15 +44,6 @@ abstract class TusClientBase {
   /// List of [Server] that are good for testing speed
   List<Server>? bestServers;
 
-  TusClientBase(
-    this.file, {
-    this.store,
-    this.maxChunkSize = 6 * 1024 * 1024,
-    this.retries = 0,
-    this.retryScale = RetryScale.constant,
-    this.retryInterval = 0,
-  });
-
   /// Create a new upload URL
   Future<void> createUpload();
 
@@ -52,10 +52,10 @@ abstract class TusClientBase {
 
   /// Starts an upload
   Future<void> upload({
+    required Uri uri,
     void Function(double, Duration)? onProgress,
     void Function(TusClient, Duration?)? onStart,
     void Function()? onComplete,
-    required Uri uri,
     RetryUpload? retryUpload,
     Map<String, String>? metadata = const {},
     Map<String, String>? headers = const {},
@@ -69,7 +69,7 @@ abstract class TusClientBase {
 
   /// Override this method to customize creating file fingerprint
   String? generateFingerprint() {
-    return file.path.replaceAll(RegExp(r"\W+"), '.');
+    return file.path.replaceAll(RegExp(r'\W+'), '.');
   }
 
   /// Sets to servers to test for upload speed
@@ -82,16 +82,17 @@ abstract class TusClientBase {
   String generateMetadata() {
     final meta = Map<String, String>.from(metadata ?? {});
 
-    if (!meta.containsKey("filename")) {
+    if (!meta.containsKey('filename')) {
       // Add the filename to the metadata from the whole directory path.
       //I.e: /home/user/file.txt -> file.txt
-      meta["filename"] = file.path.split('/').last;
+      meta['filename'] = file.path.split('/').last;
     }
 
     return meta.entries
-        .map((entry) =>
-            entry.key + " " + base64.encode(utf8.encode(entry.value)))
-        .join(",");
+        .map(
+          (entry) => '${entry.key} ${base64.encode(utf8.encode(entry.value))}',
+        )
+        .join(',');
   }
 
   /// Storage used to save and retrieve upload URLs by its fingerprint.

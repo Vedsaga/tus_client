@@ -1,17 +1,18 @@
-import 'package:universal_io/io.dart';
-
 import 'package:cross_file/cross_file.dart' show XFile;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tus_client_dart/tus_client_dart.dart';
+import 'package:universal_io/io.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -19,19 +20,21 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.teal,
       ),
-      home: UploadPage(),
+      home: const UploadPage(),
     );
   }
 }
 
 class UploadPage extends StatefulWidget {
+  const UploadPage({super.key});
+
   @override
   _UploadPageState createState() => _UploadPageState();
 }
 
 class _UploadPageState extends State<UploadPage> {
   double _progress = 0;
-  Duration _estimate = Duration();
+  Duration _estimate = const Duration();
   XFile? _file;
   TusClient? _client;
   Uri? _fileUrl;
@@ -40,17 +43,17 @@ class _UploadPageState extends State<UploadPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('TUS Client Upload Demo'),
+        title: const Text('TUS Client Upload Demo'),
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            SizedBox(height: 12),
-            Padding(
+            const SizedBox(height: 12),
+            const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               child: Text(
-                "This demo uses TUS client to upload a file",
+                'This demo uses TUS client to upload a file',
                 style: TextStyle(fontSize: 18),
               ),
             ),
@@ -68,12 +71,12 @@ class _UploadPageState extends State<UploadPage> {
                     });
                   },
                   child: Container(
-                    padding: EdgeInsets.all(20),
-                    child: Column(
+                    padding: const EdgeInsets.all(20),
+                    child: const Column(
                       children: <Widget>[
                         Icon(Icons.cloud_upload, color: Colors.white, size: 60),
                         Text(
-                          "Upload a file",
+                          'Upload a file',
                           style: TextStyle(fontSize: 25, color: Colors.white),
                         ),
                       ],
@@ -93,32 +96,33 @@ class _UploadPageState extends State<UploadPage> {
                           : () async {
                               final tempDir = await getTemporaryDirectory();
                               final tempDirectory = Directory(
-                                  '${tempDir.path}/${_file?.name}_uploads');
+                                '${tempDir.path}/${_file?.name}_uploads',
+                              );
                               if (!tempDirectory.existsSync()) {
                                 tempDirectory.createSync(recursive: true);
                               }
 
                               // Create a client
-                              print("Create a client");
+                              print('Create a client');
                               _client = TusClient(
                                 _file!,
                                 store: TusFileStore(tempDirectory),
                                 maxChunkSize: 512 * 1024 * 10,
                               );
 
-                              print("Starting upload");
+                              print('Starting upload');
                               await _client!.upload(
                                 onStart:
                                     (TusClient client, Duration? estimation) {
                                   print(estimation);
                                 },
                                 onComplete: () async {
-                                  print("Completed!");
+                                  print('Completed!');
                                   tempDirectory.deleteSync(recursive: true);
                                   setState(() => _fileUrl = _client!.uploadUrl);
                                 },
                                 onProgress: (progress, estimate) {
-                                  print("Progress: $progress");
+                                  print('Progress: $progress');
                                   print('Estimate: $estimate');
                                   setState(() {
                                     _progress = progress;
@@ -126,7 +130,8 @@ class _UploadPageState extends State<UploadPage> {
                                   });
                                 },
                                 uri: Uri.parse(
-                                    "https://tusd.tusdemo.net/files/"),
+                                  'https://tusd.tusdemo.net/files/',
+                                ),
                                 metadata: {
                                   'testMetaData': 'testMetaData',
                                   'testMetaData2': 'testMetaData2',
@@ -138,18 +143,18 @@ class _UploadPageState extends State<UploadPage> {
                                 measureUploadSpeed: true,
                               );
                             },
-                      child: Text("Upload"),
+                      child: const Text('Upload'),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _progress == 0
                           ? null
                           : () async {
-                              _client!.pauseUpload();
+                              await _client!.pauseUpload();
                             },
-                      child: Text("Pause"),
+                      child: const Text('Pause'),
                     ),
                   ),
                 ],
@@ -162,7 +167,7 @@ class _UploadPageState extends State<UploadPage> {
                   padding: const EdgeInsets.all(1),
                   color: Colors.grey,
                   width: double.infinity,
-                  child: Text(" "),
+                  child: const Text(' '),
                 ),
                 FractionallySizedBox(
                   widthFactor: _progress / 100,
@@ -170,7 +175,7 @@ class _UploadPageState extends State<UploadPage> {
                     margin: const EdgeInsets.all(8),
                     padding: const EdgeInsets.all(1),
                     color: Colors.green,
-                    child: Text(" "),
+                    child: const Text(' '),
                   ),
                 ),
                 Container(
@@ -178,7 +183,8 @@ class _UploadPageState extends State<UploadPage> {
                   padding: const EdgeInsets.all(1),
                   width: double.infinity,
                   child: Text(
-                      "Progress: ${_progress.toStringAsFixed(1)}%, estimated time: ${_printDuration(_estimate)}"),
+                    'Progress: ${_progress.toStringAsFixed(1)}%, estimated time: ${_printDuration(_estimate)}',
+                  ),
                 ),
               ],
             ),
@@ -190,11 +196,11 @@ class _UploadPageState extends State<UploadPage> {
                   if (result) {
                     setState(() {
                       _progress = 0;
-                      _estimate = Duration();
+                      _estimate = const Duration();
                     });
                   }
                 },
-                child: Text("Cancel"),
+                child: const Text('Cancel'),
               ),
             GestureDetector(
               onTap: _progress != 100
@@ -204,10 +210,10 @@ class _UploadPageState extends State<UploadPage> {
                     },
               child: Container(
                 color: _progress == 100 ? Colors.green : Colors.grey,
-                padding: const EdgeInsets.all(8.0),
-                margin: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(8),
+                margin: const EdgeInsets.all(8),
                 child:
-                    Text(_progress == 100 ? "Link to view:\n $_fileUrl" : "-"),
+                    Text(_progress == 100 ? 'Link to view:\n $_fileUrl' : '-'),
               ),
             ),
           ],

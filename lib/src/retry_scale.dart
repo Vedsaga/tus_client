@@ -32,12 +32,10 @@ enum RetryScale {
           // For linear scale, the interval increases linearly with each retry.
           // The interval for the nth retry is n times the retryInterval.
           baseInterval = (retry + 1) * retryInterval;
-          break;
         case RetryScale.exponential:
           // For exponential scale, the interval doubles with each retry.
           // The interval for the nth retry is 2^(n-1) times the retryInterval.
           baseInterval = retryInterval * pow(2, retry).toInt();
-          break;
       }
     }
 

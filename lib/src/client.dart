@@ -1,15 +1,14 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:math' show min;
-import 'dart:typed_data' show Uint8List, BytesBuilder;
+import 'dart:typed_data' show BytesBuilder, Uint8List;
 
+import 'package:http/http.dart' as http;
 import 'package:speed_test_dart/speed_test_dart.dart';
+import 'package:tus_client_dart/src/exceptions.dart';
 import 'package:tus_client_dart/src/retry_scale.dart';
 import 'package:tus_client_dart/src/tus_client_base.dart';
 import 'package:universal_io/io.dart';
-
-import 'exceptions.dart';
-import 'package:http/http.dart' as http;
 
 /// This class is used for creating or resuming uploads.
 class TusClient extends TusClientBase {
@@ -21,7 +20,7 @@ class TusClient extends TusClientBase {
     super.retryScale = RetryScale.constant,
     super.retryInterval = 0,
   }) {
-    _fingerprint = generateFingerprint() ?? "";
+    _fingerprint = generateFingerprint() ?? '';
   }
 
   /// Override this method to use a custom Client
@@ -30,6 +29,7 @@ class TusClient extends TusClientBase {
   int _actualRetry = 0;
 
   /// Create a new [upload] throwing [ProtocolException] on server error
+  @override
   Future<void> createUpload() async {
     try {
       _fileSize = await file.length();
@@ -37,38 +37,42 @@ class TusClient extends TusClientBase {
       final client = getHttpClient();
       final createHeaders = Map<String, String>.from(headers ?? {})
         ..addAll({
-          "Tus-Resumable": tusVersion,
-          "Upload-Metadata": _uploadMetadata ?? "",
-          "Upload-Length": "$_fileSize",
+          'Tus-Resumable': tusVersion,
+          'Upload-Metadata': _uploadMetadata ?? '',
+          'Upload-Length': '$_fileSize',
         });
 
-      final _url = url;
+      final uri = url;
 
-      if (_url == null) {
+      if (uri == null) {
         throw ProtocolException('Error in request, URL is incorrect');
       }
 
-      final response = await client.post(_url, headers: createHeaders);
+      final response = await client.post(uri, headers: createHeaders);
 
       if (!(response.statusCode >= 200 && response.statusCode < 300) &&
           response.statusCode != 404) {
         throw ProtocolException(
-            "Unexpected Error while creating upload", response.statusCode);
+          'Unexpected Error while creating upload',
+          response.statusCode,
+        );
       }
 
-      String urlStr = response.headers["location"] ?? "";
+      final urlStr = response.headers['location'] ?? '';
       if (urlStr.isEmpty) {
         throw ProtocolException(
-            "missing upload Uri in response for creating upload");
+          'missing upload Uri in response for creating upload',
+        );
       }
 
       _uploadUrl = _parseUrl(urlStr);
-      store?.set(_fingerprint, _uploadUrl as Uri);
+      await store?.set(_fingerprint, _uploadUrl!);
     } on FileSystemException {
       throw Exception('Cannot find file to upload');
     }
   }
 
+  @override
   Future<bool> isResumable() async {
     try {
       _fileSize = await file.length();
@@ -91,6 +95,7 @@ class TusClient extends TusClientBase {
     }
   }
 
+  @override
   Future<void> setUploadTestServers() async {
     final tester = SpeedTestDart();
 
@@ -106,11 +111,12 @@ class TusClient extends TusClientBase {
     }
   }
 
+  @override
   Future<void> uploadSpeedTest() async {
     final tester = SpeedTestDart();
 
-    // If bestServers are null or they are empty, we will not measure upload speed
-    // as it wouldn't be accurate at all
+    // If bestServers are null or they are empty, we will not measure upload
+    // speed as it wouldn't be accurate at all
     if (bestServers == null || (bestServers?.isEmpty ?? true)) {
       uploadSpeed = null;
       return;
@@ -125,6 +131,7 @@ class TusClient extends TusClientBase {
 
   /// Start or resume an upload in chunks of [maxChunkSize] throwing
   /// [ProtocolException] on server error
+  @override
   Future<void> upload({
     required Uri uri,
     void Function(double, Duration)? onProgress,
@@ -137,14 +144,14 @@ class TusClient extends TusClientBase {
   }) async {
     setUploadData(uri, headers, metadata);
 
-    final _isResumable = await isResumable();
+    final canResumeUpload = await isResumable();
 
     if (measureUploadSpeed) {
       await setUploadTestServers();
       await uploadSpeedTest();
     }
 
-    if (!_isResumable) {
+    if (!canResumeUpload) {
       await createUpload();
     }
 
@@ -152,7 +159,7 @@ class TusClient extends TusClientBase {
     _offset = await _getOffset();
 
     // Save the file size as an int in a variable to avoid having to call
-    int totalBytes = _fileSize as int;
+    final totalBytes = _fileSize!;
 
     // We start a stopwatch to calculate the upload speed
     final uploadStopwatch = Stopwatch()..start();
@@ -163,10 +170,10 @@ class TusClient extends TusClientBase {
     if (onStart != null) {
       Duration? estimate;
       if (uploadSpeed != null) {
-        final _workedUploadSpeed = uploadSpeed! * 1000000;
+        final workedUploadSpeed = uploadSpeed! * 1000000;
 
         estimate = Duration(
-          seconds: (totalBytes / _workedUploadSpeed).round(),
+          seconds: (totalBytes / workedUploadSpeed).round(),
         );
       }
       // The time remaining to finish the upload
@@ -176,9 +183,9 @@ class TusClient extends TusClientBase {
     while (!_pauseUpload && _offset < totalBytes) {
       final uploadHeaders = Map<String, String>.from(headers ?? {})
         ..addAll({
-          "Tus-Resumable": tusVersion,
-          "Upload-Offset": "$_offset",
-          "Content-Type": "application/offset+octet-stream"
+          'Tus-Resumable': tusVersion,
+          'Upload-Offset': '$_offset',
+          'Content-Type': 'application/offset+octet-stream',
         });
 
       await _performUpload(
@@ -193,22 +200,22 @@ class TusClient extends TusClientBase {
   }
 
   Future<void> _performUpload({
-    void Function(double, Duration)? onProgress,
-    void Function()? onComplete,
-    RetryUpload? retryUpload,
     required Map<String, String> uploadHeaders,
     required http.Client client,
     required Stopwatch uploadStopwatch,
     required int totalBytes,
+    void Function(double, Duration)? onProgress,
+    void Function()? onComplete,
+    RetryUpload? retryUpload,
   }) async {
     try {
       final uri = _uploadUrl;
       if (uri == null) {
         throw ProtocolException(
-          "Missing upload Uri in response for creating upload",
+          'Missing upload Uri in response for creating upload',
         );
       }
-      final request = http.Request("PATCH", uri)
+      final request = http.Request('PATCH', uri)
         ..headers.addAll(uploadHeaders)
         ..bodyBytes = await _getData();
       _response = await client.send(request);
@@ -222,14 +229,14 @@ class TusClient extends TusClientBase {
             if (onProgress != null && !_pauseUpload) {
               // Total byte sent
               final totalSent = _offset + maxChunkSize;
-              double _workedUploadSpeed = 1.0;
+              var workedUploadSpeed = 1.0;
 
               // If upload speed != null, it means it has been measured
               if (uploadSpeed != null) {
                 // Multiplied by 10^6 to convert from Mb/s to b/s
-                _workedUploadSpeed = uploadSpeed! * 1000000;
+                workedUploadSpeed = uploadSpeed! * 1000000;
               } else {
-                _workedUploadSpeed =
+                workedUploadSpeed =
                     totalSent / uploadStopwatch.elapsedMilliseconds;
               }
 
@@ -238,11 +245,11 @@ class TusClient extends TusClientBase {
 
               // The time remaining to finish the upload
               final estimate = Duration(
-                seconds: (remainData / _workedUploadSpeed).round(),
+                seconds: (remainData / workedUploadSpeed).round(),
               );
 
               final progress = totalSent / totalBytes * 100;
-              onProgress((progress).clamp(0, 100), estimate);
+              onProgress(progress.clamp(0, 100), estimate);
               _actualRetry = 0;
             }
           },
@@ -251,29 +258,31 @@ class TusClient extends TusClientBase {
         // check if correctly uploaded
         if (!(_response!.statusCode >= 200 && _response!.statusCode < 300)) {
           throw ProtocolException(
-            "Error while uploading file",
+            'Error while uploading file',
             _response!.statusCode,
           );
         }
 
-        int? serverOffset = _parseOffset(_response!.headers["upload-offset"]);
+        final serverOffset = _parseOffset(_response!.headers['upload-offset']);
         if (serverOffset == null) {
           throw ProtocolException(
-              "Response to PATCH request contains no or invalid Upload-Offset header");
+            'Response to PATCH request contains no or invalid Upload-Offset header',
+          );
         }
         if (_offset != serverOffset) {
           throw ProtocolException(
-              "Response contains different Upload-Offset value ($serverOffset) than expected ($_offset)");
+            'Response contains different Upload-Offset value ($serverOffset) than expected ($_offset)',
+          );
         }
 
         if (_offset == totalBytes && !_pauseUpload) {
-          this.onCompleteUpload();
+          await onCompleteUpload();
           if (onComplete != null) {
             onComplete();
           }
         }
       } else {
-        throw ProtocolException("Error getting Response from server");
+        throw ProtocolException('Error getting Response from server');
       }
     } catch (e) {
       if (_actualRetry >= retries) rethrow;
@@ -288,23 +297,25 @@ class TusClient extends TusClientBase {
   }
 
   /// Pause the current upload
+  @override
   Future<bool> pauseUpload() async {
     try {
       _pauseUpload = true;
-      await _response?.stream.timeout(Duration.zero);
+      _response?.stream.timeout(Duration.zero);
       return true;
     } catch (e) {
-      throw Exception("Error pausing upload");
+      throw Exception('Error pausing upload');
     }
   }
 
+  @override
   Future<bool> cancelUpload() async {
     try {
       await pauseUpload();
       await store?.remove(_fingerprint);
       return true;
     } catch (_) {
-      throw Exception("Error cancelling upload");
+      throw Exception('Error cancelling upload');
     }
   }
 
@@ -330,22 +341,22 @@ class TusClient extends TusClientBase {
 
     final offsetHeaders = Map<String, String>.from(headers ?? {})
       ..addAll({
-        "Tus-Resumable": tusVersion,
+        'Tus-Resumable': tusVersion,
       });
-    final response =
-        await client.head(_uploadUrl as Uri, headers: offsetHeaders);
+    final response = await client.head(_uploadUrl!, headers: offsetHeaders);
 
     if (!(response.statusCode >= 200 && response.statusCode < 300)) {
       throw ProtocolException(
-        "Unexpected error while resuming upload",
+        'Unexpected error while resuming upload',
         response.statusCode,
       );
     }
 
-    int? serverOffset = _parseOffset(response.headers["upload-offset"]);
+    final serverOffset = _parseOffset(response.headers['upload-offset']);
     if (serverOffset == null) {
       throw ProtocolException(
-          "missing upload offset in response for resuming upload");
+        'missing upload offset in response for resuming upload',
+      );
     }
     return serverOffset;
   }
@@ -353,8 +364,8 @@ class TusClient extends TusClientBase {
   /// Get data from file to upload
 
   Future<Uint8List> _getData() async {
-    int start = _offset;
-    int end = _offset + maxChunkSize;
+    final start = _offset;
+    var end = _offset + maxChunkSize;
     end = end > (_fileSize ?? 0) ? _fileSize ?? 0 : end;
 
     final result = BytesBuilder();
@@ -368,21 +379,23 @@ class TusClient extends TusClientBase {
     return result.takeBytes();
   }
 
-  int? _parseOffset(String? offset) {
+  int? _parseOffset(String? offsetValue) {
+    var offset = offsetValue;
     if (offset == null || offset.isEmpty) {
       return null;
     }
-    if (offset.contains(",")) {
-      offset = offset.substring(0, offset.indexOf(","));
+    if (offset.contains(',')) {
+      offset = offset.substring(0, offset.indexOf(','));
     }
     return int.tryParse(offset);
   }
 
-  Uri _parseUrl(String urlStr) {
-    if (urlStr.contains(",")) {
-      urlStr = urlStr.substring(0, urlStr.indexOf(","));
+  Uri _parseUrl(String urlString) {
+    var urlStr = urlString;
+    if (urlStr.contains(',')) {
+      urlStr = urlStr.substring(0, urlStr.indexOf(','));
     }
-    Uri uploadUrl = Uri.parse(urlStr);
+    var uploadUrl = Uri.parse(urlStr);
     if (uploadUrl.host.isEmpty) {
       uploadUrl = uploadUrl.replace(host: url?.host, port: url?.port);
     }
@@ -396,7 +409,7 @@ class TusClient extends TusClientBase {
 
   int? _fileSize;
 
-  String _fingerprint = "";
+  String _fingerprint = '';
 
   String? _uploadMetadata;
 
@@ -413,5 +426,5 @@ class TusClient extends TusClientBase {
   String get fingerprint => _fingerprint;
 
   /// The 'Upload-Metadata' header sent to server
-  String get uploadMetadata => _uploadMetadata ?? "";
+  String get uploadMetadata => _uploadMetadata ?? '';
 }

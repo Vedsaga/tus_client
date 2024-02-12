@@ -18,3 +18,4 @@ dev_dependencies:
   build_runner: ^2.4.6
   test: ^1.24.7
   freezed: ^2.4.7
+  very_good_analysis: ^5.1.0
