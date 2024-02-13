@@ -23,11 +23,11 @@ typedef RetryUpload = FutureOr<void> Function(
 abstract class TusClientBase {
   TusClientBase(
     this.file, {
-    required this.maxChunkSize,
-    this.store,
-    this.maxRetries = 0,
+    this.maxChunkSize = 6 * 1024 * 1024,
+    this.maxRetries = 5,
     this.retryScale = RetryScale.exponential,
     this.firstRetryCooldownTimeSecond = 0,
+    this.store,
   });
 
   /// Version of the tus protocol used by the client. The remote server needs to

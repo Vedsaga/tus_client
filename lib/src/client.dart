@@ -13,10 +13,10 @@ class TusClient extends TusClientBase {
   TusClient(
     super.file, {
     super.store,
-    super.maxChunkSize = 6* 1024 * 1024,
-    super.maxRetries = 0,
-    super.retryScale = RetryScale.constant,
-    super.firstRetryCooldownTimeSecond = 0,
+    super.maxChunkSize,
+    super.maxRetries,
+    super.retryScale,
+    super.firstRetryCooldownTimeSecond,
   }) {
     _fingerprint = generateFingerprint() ?? '';
   }
