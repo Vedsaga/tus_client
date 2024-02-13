@@ -13,7 +13,7 @@ class TusClient extends TusClientBase {
   TusClient(
     super.file, {
     super.store,
-    super.maxChunkSize,
+    super.maxChunkSizeByte,
     super.maxRetries,
     super.retryScale,
     super.firstRetryCooldownTimeSecond,
@@ -154,7 +154,7 @@ class TusClient extends TusClientBase {
     }
 
     // get offset from server
-    _offset = await _getOffset();
+    _chunkOffsetByte = await _getOffset();
 
     // Save the file size as an int in a variable to avoid having to call
     final totalBytes = _fileSize!;
@@ -178,11 +178,11 @@ class TusClient extends TusClientBase {
       onStart(this, estimate);
     }
 
-    while (!_pauseUpload && _offset < totalBytes) {
+    while (!_pauseUpload && _chunkOffsetByte < totalBytes) {
       final uploadHeaders = Map<String, String>.from(headers ?? {})
         ..addAll({
           'Tus-Resumable': tusVersion,
-          'Upload-Offset': '$_offset',
+          'Upload-Offset': '$_chunkOffsetByte',
           'Content-Type': 'application/offset+octet-stream',
         });
 
@@ -226,7 +226,7 @@ class TusClient extends TusClientBase {
           onDone: () {
             if (onProgress != null && !_pauseUpload) {
               // Total byte sent
-              final totalSent = _offset + maxChunkSize;
+              final totalSent = _chunkOffsetByte + maxChunkSizeByte;
               var workedUploadSpeed = 1.0;
 
               // If upload speed != null, it means it has been measured
@@ -267,13 +267,13 @@ class TusClient extends TusClientBase {
             '''Response to PATCH request contains no or invalid Upload-Offset header''',
           );
         }
-        if (_offset != serverOffset) {
+        if (_chunkOffsetByte != serverOffset) {
           throw ProtocolException(
-            '''Response contains different Upload-Offset value ($serverOffset) than expected ($_offset)''',
+            '''Response contains different Upload-Offset value ($serverOffset) than expected ($_chunkOffsetByte)''',
           );
         }
 
-        if (_offset == totalBytes && !_pauseUpload) {
+        if (_chunkOffsetByte == totalBytes && !_pauseUpload) {
          await onComplete?.call();
           if (onComplete != null) {
             onComplete();
@@ -357,8 +357,8 @@ class TusClient extends TusClientBase {
   /// Get data from file to upload
 
   Future<Uint8List> _getData() async {
-    final start = _offset;
-    var end = _offset + maxChunkSize;
+    final start = _chunkOffsetByte;
+    var end = _chunkOffsetByte + maxChunkSizeByte;
     end = end > (_fileSize ?? 0) ? _fileSize ?? 0 : end;
 
     final result = BytesBuilder();
@@ -366,8 +366,8 @@ class TusClient extends TusClientBase {
       result.add(chunk);
     }
 
-    final bytesRead = min(maxChunkSize, result.length);
-    _offset = _offset + bytesRead;
+    final bytesRead = min(maxChunkSizeByte, result.length);
+    _chunkOffsetByte = _chunkOffsetByte + bytesRead;
 
     return result.takeBytes();
   }
@@ -408,7 +408,7 @@ class TusClient extends TusClientBase {
 
   Uri? _uploadUrl;
 
-  int _offset = 0;
+  int _chunkOffsetByte = 0;
 
   bool _pauseUpload = false;
 

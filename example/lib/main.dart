@@ -107,7 +107,7 @@ class _UploadPageState extends State<UploadPage> {
                               _client = TusClient(
                                 _file!,
                                 store: TusFileStore(tempDirectory),
-                                maxChunkSize: 512 * 1024 * 10,
+                                maxChunkSizeByte: 512 * 1024 * 10,
                               );
 
                               print('Starting upload');

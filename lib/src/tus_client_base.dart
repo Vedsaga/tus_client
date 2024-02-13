@@ -23,7 +23,7 @@ typedef RetryUpload = FutureOr<void> Function(
 abstract class TusClientBase {
   TusClientBase(
     this.file, {
-    this.maxChunkSize = 6 * 1024 * 1024,
+    this.maxChunkSizeByte = 6 * 1024 * 1024,
     this.maxRetries = 5,
     this.retryScale = RetryScale.exponential,
     this.firstRetryCooldownTimeSecond = 0,
@@ -106,8 +106,8 @@ abstract class TusClientBase {
   final XFile file;
 
   /// The maximum payload size in bytes when uploading
-  /// the file in chunks (512KB)
-  final int maxChunkSize;
+  /// the file in chunks (6MB)
+  final int maxChunkSizeByte;
 
   /// The number of times that should retry to resume the upload if a failure
   /// occurs after rethrow the error.
