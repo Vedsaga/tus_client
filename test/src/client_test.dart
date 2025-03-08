@@ -12,7 +12,7 @@ class MockTusClient extends TusClient {
   MockTusClient(
     super.file, {
     super.store,
-    super.maxChunkSize,
+    super.maxChunkSizeByte,
   }) {
     httpClient = MockClient();
   }
@@ -351,7 +351,7 @@ void main() {
   });
 
   test('client_test.TusClient.upload().pause', () async {
-    final client = MockTusClient(file, maxChunkSize: 50);
+    final client = MockTusClient(file, maxChunkSizeByte: 50);
     when(client.httpClient?.post(url, headers: anyNamed('headers'))).thenAnswer(
       (_) async =>
           http.Response('', 201, headers: {'location': uploadLocation}),
@@ -387,7 +387,7 @@ void main() {
   });
 
   test('client_test.TusClient.upload().chunks', () async {
-    final client = MockTusClient(file, maxChunkSize: 50);
+    final client = MockTusClient(file, maxChunkSizeByte: 50);
     when(client.httpClient?.post(url, headers: anyNamed('headers'))).thenAnswer(
       (_) async =>
           http.Response('', 201, headers: {'location': uploadLocation}),
